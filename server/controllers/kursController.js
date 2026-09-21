@@ -1,6 +1,6 @@
 // Integracija sa spoljnim API-jem - kursna lista.
-// Koristi se besplatni servis Frankfurter (https://frankfurter.dev),
-// bez registracije i bez API kljuca.
+// Koristi se besplatni servis ExchangeRate-API (open.er-api.com),
+// bez registracije i bez API kljuca. Podrzava srpski dinar.
 //
 // Node 18+ ima ugradjeni fetch, pa nije potrebna dodatna biblioteka.
 
@@ -18,9 +18,7 @@ const dohvatiKurs = async (req, res) => {
       return res.json({ ...kes, izKesa: true });
     }
 
-    const odgovor = await fetch(
-      'https://api.frankfurter.dev/v1/latest?base=RSD&symbols=EUR,USD'
-    );
+    const odgovor = await fetch('https://open.er-api.com/v6/latest/RSD');
 
     if (!odgovor.ok) {
       throw new Error(`API je vratio status ${odgovor.status}`);
@@ -28,10 +26,17 @@ const dohvatiKurs = async (req, res) => {
 
     const podaci = await odgovor.json();
 
+    if (podaci.result !== 'success') {
+      throw new Error('API nije vratio ispravan odgovor.');
+    }
+
     kes = {
-      osnova: podaci.base,      // RSD
-      datum: podaci.date,
-      kursevi: podaci.rates,    // { EUR: 0.0085, USD: 0.0092 }
+      osnova: podaci.base_code,                       // RSD
+      datum: podaci.time_last_update_utc.slice(5, 16), // npr. "21 Sep 2026"
+      kursevi: {
+        EUR: podaci.rates.EUR,
+        USD: podaci.rates.USD,
+      },
     };
     vremeKesa = sada;
 
